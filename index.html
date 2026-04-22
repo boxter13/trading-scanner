@@ -1,108 +1,461 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Scanner PRO++</title>
-<style>
-body{font-family:Arial;background:#0f172a;color:white;text-align:center}
-.card{background:#111827;padding:15px;border-radius:15px;margin:10px}
-input,button{padding:10px;margin:5px;width:90%}
-.buy{color:#22c55e;font-weight:bold}
-.sell{color:#ef4444;font-weight:bold}
-.wait{color:orange;font-weight:bold}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scanner Elite Trading</title>
+  <style>
+    :root {
+      --bg:#0b1020; --card:#121933; --line:#27345a; --text:#edf2ff; --muted:#9fb0d8;
+      --buy:#1fc77a; --sell:#ff6475; --wait:#ffbe3b; --late:#ff8f3b; --info:#6ea8fe;
+    }
+    * { box-sizing:border-box; }
+    body { margin:0; background:linear-gradient(180deg,#0a1020,#0f1730); color:var(--text); font-family:Arial,Helvetica,sans-serif; }
+    .wrap { max-width:1100px; margin:0 auto; padding:14px; }
+    .card { background:rgba(18,25,51,.98); border:1px solid var(--line); border-radius:18px; padding:14px; margin-bottom:12px; box-shadow:0 10px 24px rgba(0,0,0,.25); }
+    h1,h2,h3 { margin:0 0 10px; }
+    .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .col { flex:1; min-width:150px; }
+    input,select,button,textarea { width:100%; padding:12px; border-radius:12px; border:1px solid #33406d; background:#0f1730; color:var(--text); font-size:15px; }
+    button { cursor:pointer; font-weight:700; }
+    .primary { background:#2563eb; border-color:#2563eb; }
+    .goodBtn { background:#0f8f5b; border-color:#0f8f5b; }
+    .badBtn { background:#b42331; border-color:#b42331; }
+    .pill { display:inline-block; padding:6px 10px; border-radius:999px; font-size:12px; font-weight:700; margin-right:6px; margin-top:6px; }
+    .buy { background:var(--buy); color:#062113; }
+    .sell { background:var(--sell); color:#3d0710; }
+    .wait { background:var(--wait); color:#442c02; }
+    .late { background:var(--late); color:#411b00; }
+    .info { background:var(--info); color:#071e47; }
+    .small { font-size:12px; color:var(--muted); line-height:1.45; }
+    .item { background:#0e1530; border:1px solid var(--line); border-radius:16px; padding:12px; margin-top:10px; }
+    .price { font-size:28px; font-weight:800; }
+    .kpi { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-top:10px; }
+    .kpi div { background:#0b1228; border:1px solid var(--line); border-radius:12px; padding:10px; }
+    .mono { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+    .reason { margin-top:8px; font-size:13px; color:#dbeafe; text-align:left; }
+    .two { display:grid; grid-template-columns:1fr; gap:12px; }
+    @media (min-width:860px){ .two { grid-template-columns:1fr 1fr; } }
+    .marketBox { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .marketBox > div { background:#0b1228; border:1px solid var(--line); border-radius:12px; padding:10px; }
+  </style>
 </head>
-
 <body>
+<div class="wrap">
+  <div class="card">
+    <h1>Scanner Elite Trading</h1>
+    <div class="small">
+      Version élite : filtre marché SPY/QQQ, setup opening 5 bougies, continuation, short, rejet sommet, filtre trop tard, calcul du risque et taille de position.
+    </div>
+  </div>
 
-<h2>🔥 SCANNER PRO++</h2>
+  <div class="two">
+    <div class="card">
+      <h2>Configuration</h2>
+      <div class="row">
+        <div class="col"><input id="apiKey" placeholder="Clé API Finnhub" /></div>
+      </div>
+      <div class="row">
+        <div class="col">
+          <select id="scanInterval">
+            <option value="15">Scan 15 sec</option>
+            <option value="30" selected>Scan 30 sec</option>
+            <option value="60">Scan 60 sec</option>
+          </select>
+        </div>
+        <div class="col">
+          <select id="riskMode">
+            <option value="fixed">Stop % fixe</option>
+            <option value="structure" selected>Stop structurel</option>
+          </select>
+        </div>
+        <div class="col">
+          <input id="capital" placeholder="Capital ex 243" value="243" />
+        </div>
+      </div>
+      <div class="row">
+        <div class="col"><input id="riskPct" placeholder="Risque % par trade ex 1" value="1" /></div>
+        <div class="col"><input id="openingLatePct" placeholder="Trop tard après opening % ex 1.2" value="1.2" /></div>
+        <div class="col"><input id="continuationLatePct" placeholder="Trop tard continuation % ex 3" value="3" /></div>
+      </div>
+      <div class="row">
+        <div class="col"><button class="primary" onclick="saveConfig()">Sauvegarder config</button></div>
+        <div class="col"><button onclick="enableNotif()">Activer notifications</button></div>
+      </div>
+    </div>
 
-<div class="card">
-<input id="apiKey" placeholder="Clé Finnhub">
-<button onclick="save()">Sauvegarder</button>
+    <div class="card">
+      <h2>Ajouter à la watchlist</h2>
+      <div class="row">
+        <div class="col"><input id="symbol" placeholder="Ticker ex NVDA, MSFT, GOOGL, SPY, QQQ" /></div>
+        <div class="col"><select id="kind"><option value="stock">Action</option><option value="etf">ETF</option><option value="index">Index</option></select></div>
+      </div>
+      <div class="row">
+        <div class="col"><input id="zoneLow" placeholder="Zone achat basse ex 198" /></div>
+        <div class="col"><input id="zoneHigh" placeholder="Zone achat haute ex 201" /></div>
+      </div>
+      <div class="row">
+        <div class="col"><input id="stopPct" value="0.8" placeholder="Stop % ex 0.8" /></div>
+        <div class="col"><input id="targetR" value="2" placeholder="Objectif R ex 2" /></div>
+      </div>
+      <div class="row">
+        <div class="col"><select id="strategyMode"><option value="auto">Auto</option><option value="opening">Opening</option><option value="continuation">Continuation</option><option value="short">Short</option></select></div>
+        <div class="col"><input id="notes" placeholder="Notes perso" /></div>
+      </div>
+      <button class="goodBtn" onclick="addWatch()">Ajouter</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <div class="col"><h2>Filtre marché</h2></div>
+      <div class="col small" id="marketTime">-</div>
+      <div class="col small" id="lastScan">Dernier scan : -</div>
+    </div>
+    <div class="marketBox">
+      <div><strong>SPY</strong><div id="spyState" class="small">-</div></div>
+      <div><strong>QQQ</strong><div id="qqqState" class="small">-</div></div>
+    </div>
+    <div class="small" id="marketBias" style="margin-top:8px;">Biais marché : -</div>
+  </div>
+
+  <div class="card">
+    <h2>Watchlist</h2>
+    <div id="watchlist"></div>
+  </div>
 </div>
-
-<div class="card">
-<input id="symbol" placeholder="Ajouter action (NVDA)">
-<button onclick="add()">Ajouter</button>
-</div>
-
-<div id="list"></div>
 
 <script>
+const APP = {
+  cfg: {
+    apiKey:'', scanInterval:30, riskMode:'structure', capital:243, riskPct:1,
+    openingLatePct:1.2, continuationLatePct:3
+  },
+  watchlist: [], timer:null, alerted:{}, market:{}
+};
 
-let symbols=[]
-let key=""
+function $(id){ return document.getElementById(id); }
+function parseNum(v){ const n = Number(String(v).replace(',', '.')); return Number.isFinite(n) ? n : null; }
+function round(n){ return Math.round(n * 100) / 100; }
+function nowText(){ return new Date().toLocaleString('fr-FR', { timeZone:'Europe/Paris' }); }
 
-function save(){
-  key=document.getElementById("apiKey").value
-  alert("OK")
+function loadState(){
+  try{
+    APP.cfg = { ...APP.cfg, ...(JSON.parse(localStorage.getItem('elite_cfg')||'{}')) };
+    APP.watchlist = JSON.parse(localStorage.getItem('elite_watchlist')||'[]');
+  }catch(e){}
+  $('apiKey').value = APP.cfg.apiKey || '';
+  $('scanInterval').value = String(APP.cfg.scanInterval || 30);
+  $('riskMode').value = APP.cfg.riskMode || 'structure';
+  $('capital').value = APP.cfg.capital || 243;
+  $('riskPct').value = APP.cfg.riskPct || 1;
+  $('openingLatePct').value = APP.cfg.openingLatePct || 1.2;
+  $('continuationLatePct').value = APP.cfg.continuationLatePct || 3;
+}
+function saveState(){
+  localStorage.setItem('elite_cfg', JSON.stringify(APP.cfg));
+  localStorage.setItem('elite_watchlist', JSON.stringify(APP.watchlist));
+}
+function saveConfig(){
+  APP.cfg.apiKey = $('apiKey').value.trim();
+  APP.cfg.scanInterval = Number($('scanInterval').value);
+  APP.cfg.riskMode = $('riskMode').value;
+  APP.cfg.capital = parseNum($('capital').value) ?? 243;
+  APP.cfg.riskPct = parseNum($('riskPct').value) ?? 1;
+  APP.cfg.openingLatePct = parseNum($('openingLatePct').value) ?? 1.2;
+  APP.cfg.continuationLatePct = parseNum($('continuationLatePct').value) ?? 3;
+  saveState();
+  restartScan();
+  alert('Configuration sauvegardée');
+}
+async function enableNotif(){
+  if(!('Notification' in window)) return alert('Notifications non supportées');
+  const p = await Notification.requestPermission();
+  alert('Permission : ' + p);
+}
+function notify(title, body){
+  if('Notification' in window && Notification.permission === 'granted') new Notification(title, { body });
+}
+function uid(){ return Math.random().toString(36).slice(2,10); }
+function addWatch(){
+  const symbol = $('symbol').value.trim().toUpperCase();
+  if(!symbol) return alert('Entre un ticker');
+  APP.watchlist.push({
+    id: uid(), symbol, kind: $('kind').value, zoneLow: $('zoneLow').value.trim(), zoneHigh: $('zoneHigh').value.trim(),
+    stopPct: $('stopPct').value.trim(), targetR: $('targetR').value.trim(), strategyMode: $('strategyMode').value, notes: $('notes').value.trim()
+  });
+  $('symbol').value=''; $('zoneLow').value=''; $('zoneHigh').value=''; $('notes').value='';
+  saveState(); renderWatchlist(); scanAll();
+}
+function removeWatch(id){ APP.watchlist = APP.watchlist.filter(x => x.id !== id); saveState(); renderWatchlist(); }
+window.removeWatch = removeWatch;
+
+async function fetchQuote(symbol){
+  const key = APP.cfg.apiKey.trim();
+  if(!key) throw new Error('Clé API manquante');
+  const r = await fetch(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(symbol)}&token=${encodeURIComponent(key)}`);
+  if(!r.ok) throw new Error('Erreur quote');
+  return r.json();
+}
+async function fetchCandles(symbol, res='1'){
+  const key = APP.cfg.apiKey.trim();
+  if(!key) throw new Error('Clé API manquante');
+  const to = Math.floor(Date.now()/1000);
+  const from = to - 60*60*24*2;
+  const r = await fetch(`https://finnhub.io/api/v1/stock/candle?symbol=${encodeURIComponent(symbol)}&resolution=${res}&from=${from}&to=${to}&token=${encodeURIComponent(key)}`);
+  if(!r.ok) throw new Error('Erreur candles');
+  return r.json();
+}
+function tsNyHHMM(ts){
+  return new Date(ts*1000).toLocaleTimeString('en-GB', { timeZone:'America/New_York', hour:'2-digit', minute:'2-digit', hour12:false });
+}
+function buildCandles(raw){
+  if(!raw || raw.s !== 'ok') return [];
+  const arr=[];
+  for(let i=0;i<raw.t.length;i++) arr.push({ t:raw.t[i], hhmm:tsNyHHMM(raw.t[i]), o:raw.o[i], h:raw.h[i], l:raw.l[i], c:raw.c[i], v:raw.v[i] });
+  return arr;
+}
+function getNyClock(){
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone:'America/New_York', weekday:'short', hour:'2-digit', minute:'2-digit', hour12:false }).formatToParts(new Date());
+  return Object.fromEntries(parts.map(p => [p.type,p.value]));
+}
+function isUsOpen(){
+  const p = getNyClock(); const day = p.weekday; const total = Number(p.hour)*60 + Number(p.minute);
+  return !['Sat','Sun'].includes(day) && total >= 570 && total <= 960;
+}
+function psychLevel(price){
+  if(!price) return null; if(price >= 100) return Math.round(price/5)*5; if(price >= 20) return Math.round(price); return Math.round(price*2)/2;
+}
+function marketFilter(spy, qqq){
+  let score = 0, reasons=[];
+  const spyUp = spy.c > spy.o, qqqUp = qqq.c > qqq.o;
+  if(spyUp){ score += 1; reasons.push('SPY > open'); }
+  if(qqqUp){ score += 1; reasons.push('QQQ > open'); }
+  const spyDay = spy.pc ? ((spy.c - spy.pc)/spy.pc)*100 : 0;
+  const qqqDay = qqq.pc ? ((qqq.c - qqq.pc)/qqq.pc)*100 : 0;
+  if(spyDay > 0.2){ score += 1; reasons.push('SPY journée positive'); }
+  if(qqqDay > 0.2){ score += 1; reasons.push('QQQ journée positive'); }
+  let bias = 'NEUTRE';
+  if(score >= 3) bias = 'BULL';
+  else if(score <= 1) bias = 'FAIBLE';
+  return { score, bias, reasons, allowBuy: score >= 3, allowShort: score <= 1 };
+}
+function calcRisk(entry, stop, targetR){
+  const perShareRisk = Math.max(0.01, Math.abs(entry - stop));
+  const capitalRisk = APP.cfg.capital * (APP.cfg.riskPct / 100);
+  const qty = Math.max(0, Math.floor(capitalRisk / perShareRisk));
+  const target = round(entry + (entry > stop ? 1 : -1) * perShareRisk * (parseNum(targetR) ?? 2));
+  return { perShareRisk: round(perShareRisk), capitalRisk: round(capitalRisk), qty, target };
 }
 
-function add(){
-  let s=document.getElementById("symbol").value.toUpperCase()
-  symbols.push(s)
-  render()
+function openingAnalysis(candles, quote, item, market){
+  const a = { strategy:'opening', signal:'WAIT', score:0, reasons:[], entry:null, stop:null, target:null, qty:0, riskValue:null };
+  const open5 = candles.filter(x => x.hhmm >= '09:30' && x.hhmm <= '09:34');
+  if(open5.length < 5){ a.reasons.push('5 premières bougies incomplètes'); return a; }
+  const first = open5[0], fifth = open5[4];
+  const high4 = Math.max(...open5.slice(0,4).map(x => x.h));
+  const lowAll = Math.min(...open5.map(x => x.l));
+  const highAll = Math.max(...open5.map(x => x.h));
+  const green = open5.filter(x => x.c > x.o).length;
+  const body5 = Math.abs(fifth.c - fifth.o);
+  const upperWick5 = Math.max(0, fifth.h - Math.max(fifth.c, fifth.o));
+  const range5 = Math.max(0.01, fifth.h - fifth.l);
+  const closeNearHigh = upperWick5 <= 0.4 * range5;
+  const breakout = fifth.c > high4;
+  const aboveOpen = open5.slice(1).every(x => x.c >= first.o * 0.997);
+  const noWildWick = upperWick5 <= body5 * 1.3 || upperWick5 <= 0.25;
+
+  if(green >= 4){ a.score += 2; a.reasons.push('4+ vertes sur 5'); }
+  if(closeNearHigh){ a.score += 2; a.reasons.push('5e bougie clôture haut'); }
+  if(breakout){ a.score += 2; a.reasons.push('Breakout des 4 premières'); }
+  if(aboveOpen){ a.score += 1; a.reasons.push('Tenue au-dessus de l’open'); }
+  if(noWildWick){ a.score += 1; a.reasons.push('Pas de rejet violent'); }
+  if(market.allowBuy){ a.score += 2; a.reasons.push('Marché favorable'); } else { a.score -= 2; a.reasons.push('Marché non favorable'); }
+
+  const current = quote.c;
+  const latePct = ((current - highAll) / highAll) * 100;
+  if(latePct > APP.cfg.openingLatePct){ a.signal = 'TROP TARD'; a.reasons.push('Extension trop forte après opening'); }
+
+  const zl = parseNum(item.zoneLow), zh = parseNum(item.zoneHigh);
+  if(zl != null && zh != null){
+    if(current >= zl && current <= zh){ a.score += 2; a.reasons.push('Dans zone perso'); }
+    else a.reasons.push('Hors zone perso');
+  }
+
+  let stop = APP.cfg.riskMode === 'structure' ? round(lowAll - 0.1) : round(current * (1 - (parseNum(item.stopPct) ?? 0.8)/100));
+  const risk = calcRisk(round(current), stop, item.targetR);
+  a.entry = round(current); a.stop = stop; a.target = risk.target; a.qty = risk.qty; a.riskValue = risk.capitalRisk;
+
+  if(a.signal !== 'TROP TARD'){
+    if(a.score >= 8) a.signal = 'BUY';
+    else if(a.score <= 3) a.signal = 'NO BUY';
+    else a.signal = 'WAIT';
+  }
+  return a;
 }
 
-function render(){
-  let html=""
-  symbols.forEach(s=>{
-    html+=`<div class="card" id="${s}">${s} : loading...</div>`
-  })
-  document.getElementById("list").innerHTML=html
+function continuationAnalysis(candles, quote, item, market){
+  const a = { strategy:'continuation', signal:'WAIT', score:0, reasons:[], entry:null, stop:null, target:null, qty:0, riskValue:null };
+  const last12 = candles.slice(-12);
+  if(last12.length < 12){ a.reasons.push('Pas assez de bougies'); return a; }
+  const highs = last12.map(x => x.h), lows = last12.map(x => x.l), closes = last12.map(x => x.c);
+  const last = last12[last12.length-1];
+  const priorHigh = Math.max(...highs.slice(0,11));
+  const priorLow5 = Math.min(...lows.slice(6,11));
+  const trendUp = closes[11] > closes[6] && closes[6] > closes[2];
+  const breakout = last.c > priorHigh;
+  const closeNearHigh = (last.h - last.c) <= (last.h - last.l) * 0.35;
+  if(trendUp){ a.score += 2; a.reasons.push('Tendance intraday haussière'); }
+  if(breakout){ a.score += 2; a.reasons.push('Breakout local'); }
+  if(closeNearHigh){ a.score += 1; a.reasons.push('Clôture forte'); }
+  if(market.allowBuy){ a.score += 2; a.reasons.push('Marché favorable'); } else { a.score -= 2; a.reasons.push('Marché faible'); }
+
+  const extensionPct = ((last.c - priorLow5) / Math.max(0.01, priorLow5)) * 100;
+  if(extensionPct > APP.cfg.continuationLatePct){ a.signal = 'TROP TARD'; a.reasons.push('Continuation trop étendue'); }
+
+  const zl = parseNum(item.zoneLow), zh = parseNum(item.zoneHigh);
+  if(zl != null && zh != null && last.c >= zl && last.c <= zh){ a.score += 1; a.reasons.push('Dans zone perso'); }
+
+  let stop = APP.cfg.riskMode === 'structure' ? round(priorLow5 - 0.1) : round(last.c * (1 - (parseNum(item.stopPct) ?? 0.8)/100));
+  const risk = calcRisk(round(last.c), stop, item.targetR);
+  a.entry = round(last.c); a.stop = stop; a.target = risk.target; a.qty = risk.qty; a.riskValue = risk.capitalRisk;
+  if(a.signal !== 'TROP TARD'){
+    if(a.score >= 6) a.signal = 'BUY';
+    else if(a.score <= 2) a.signal = 'NO BUY';
+  }
+  return a;
 }
 
-async function getQuote(s){
-  let r=await fetch(`https://finnhub.io/api/v1/quote?symbol=${s}&token=${key}`)
-  return await r.json()
+function shortAnalysis(candles, quote, item, market){
+  const a = { strategy:'short', signal:'WAIT', score:0, reasons:[], entry:null, stop:null, target:null, qty:0, riskValue:null };
+  const last10 = candles.slice(-10);
+  if(last10.length < 10){ a.reasons.push('Pas assez de bougies'); return a; }
+  const highs = last10.map(x => x.h), lows = last10.map(x => x.l), closes = last10.map(x => x.c);
+  const last = last10[last10.length-1], prev = last10[last10.length-2];
+  const lowerHighs = highs[9] < highs[8] && highs[8] <= highs[7];
+  const lowerCloses = closes[9] < closes[8] && closes[8] < closes[7];
+  const rejectionTop = (last.h - last.c) > Math.max(0.01, (last.c - last.l)) * 1.6;
+  const brokeSupport = last.c < Math.min(...closes.slice(4,9));
+  if(lowerHighs){ a.score += 2; a.reasons.push('Lower highs'); }
+  if(lowerCloses){ a.score += 2; a.reasons.push('Perte de momentum'); }
+  if(rejectionTop){ a.score += 2; a.reasons.push('Rejet sommet'); }
+  if(brokeSupport){ a.score += 2; a.reasons.push('Cassure support'); }
+  if(market.allowShort){ a.score += 2; a.reasons.push('Marché faible, short autorisé'); } else { a.score -= 2; a.reasons.push('Marché trop fort pour short'); }
+
+  const stop = round(Math.max(...highs.slice(-5)) + 0.1);
+  const risk = calcRisk(round(last.c), stop, item.targetR);
+  a.entry = round(last.c); a.stop = stop; a.target = risk.target; a.qty = risk.qty; a.riskValue = risk.capitalRisk;
+  if(a.score >= 7) a.signal = 'SHORT';
+  else if(a.score <= 2) a.signal = 'NO SHORT';
+  return a;
 }
 
-function marketFilter(spy,qqq){
-  if(spy.c>spy.o && qqq.c>qqq.o) return true
-  return false
+function mergeWeakness(candles, quote, analysis){
+  const last6 = candles.slice(-6); if(last6.length < 6) return analysis;
+  const highs = last6.map(x => x.h), lows = last6.map(x => x.l), closes = last6.map(x => x.c);
+  const last = last6[last6.length-1];
+  const rejectionTop = (last.h - last.c) > Math.max(0.01, (last.c - last.l)) * 1.5;
+  const failedPsych = (()=>{ const p = psychLevel(quote.c); return p && quote.c < p && Math.abs(quote.c-p)/p < 0.003; })();
+  const brokeMiniSupport = last.c < Math.min(...closes.slice(0,5));
+  if(rejectionTop){ analysis.score -= 2; analysis.reasons.push('Rejet sommet récent'); }
+  if(failedPsych){ analysis.score -= 1; analysis.reasons.push('Sous niveau psychologique'); }
+  if(brokeMiniSupport){ analysis.score -= 2; analysis.reasons.push('Cassure mini support'); }
+  if((analysis.signal === 'BUY' || analysis.signal === 'WAIT') && analysis.score <= 3) analysis.signal = 'NO BUY';
+  return analysis;
 }
 
-function analyze(price,open,high,low){
-  let move=((price-open)/open)*100
-
-  if(move>0.8) return "TROP TARD"
-  if(price>open) return "BUY"
-  if(price<open) return "NO BUY"
-  return "WAIT"
+function analyzeAll(symbol, candles, quote, item, market){
+  const mode = item.strategyMode || 'auto';
+  let a;
+  if(mode === 'opening') a = openingAnalysis(candles, quote, item, market);
+  else if(mode === 'continuation') a = continuationAnalysis(candles, quote, item, market);
+  else if(mode === 'short') a = shortAnalysis(candles, quote, item, market);
+  else {
+    const o = openingAnalysis(candles, quote, item, market);
+    const c = continuationAnalysis(candles, quote, item, market);
+    const s = shortAnalysis(candles, quote, item, market);
+    a = [o,c,s].sort((x,y)=>(y.score||0)-(x.score||0))[0];
+  }
+  return mergeWeakness(candles, quote, a);
 }
 
-async function scan(){
+async function scanMarket(){
+  const [spy, qqq] = await Promise.all([fetchQuote('SPY'), fetchQuote('QQQ')]);
+  APP.market.spy = spy; APP.market.qqq = qqq; APP.market.filter = marketFilter(spy, qqq);
+  $('spyState').innerHTML = `Prix ${round(spy.c)} | Open ${round(spy.o)} | ${APP.market.filter.reasons.filter(x=>x.includes('SPY')).join(' / ') || '-'}`;
+  $('qqqState').innerHTML = `Prix ${round(qqq.c)} | Open ${round(qqq.o)} | ${APP.market.filter.reasons.filter(x=>x.includes('QQQ')).join(' / ') || '-'}`;
+  $('marketBias').textContent = `Biais marché : ${APP.market.filter.bias}`;
+  $('marketTime').textContent = isUsOpen() ? 'US ouvert' : 'US fermé / hors horaires';
+}
 
-  if(!key) return
-
-  let spy=await getQuote("SPY")
-  let qqq=await getQuote("QQQ")
-
-  let marketOk=marketFilter(spy,qqq)
-
-  for(let s of symbols){
-
-    let d=await getQuote(s)
-
-    let signal=analyze(d.c,d.o,d.h,d.l)
-
-    if(!marketOk && signal==="BUY"){
-      signal="NO BUY"
+function signalClass(s){
+  if(s === 'BUY') return 'buy'; if(s === 'SHORT') return 'sell'; if(s === 'NO BUY' || s === 'NO SHORT') return 'sell'; if(s === 'TROP TARD') return 'late'; return 'wait';
+}
+async function scanOne(item){
+  try{
+    const [quote, raw] = await Promise.all([fetchQuote(item.symbol), fetchCandles(item.symbol, '1')]);
+    const candles = buildCandles(raw);
+    item.quote = quote;
+    item.analysis = analyzeAll(item.symbol, candles, quote, item, APP.market.filter || {allowBuy:true,allowShort:false,bias:'NEUTRE'});
+    item.lastScan = nowText();
+    const sig = item.analysis.signal;
+    const key = `${item.symbol}_${sig}_${Math.round(quote.c||0)}`;
+    if((sig === 'BUY' || sig === 'SHORT' || sig === 'TROP TARD') && !APP.alerted[key]){
+      APP.alerted[key] = true;
+      notify(`${item.symbol} ${sig}`, (item.analysis.reasons || []).slice(0,2).join(' | '));
     }
-
-    let color="wait"
-    if(signal==="BUY") color="buy"
-    if(signal==="NO BUY") color="sell"
-
-    document.getElementById(s).innerHTML=
-      `${s} : ${d.c} → <span class="${color}">${signal}</span>`
+  }catch(e){
+    item.analysis = { signal:'WAIT', score:0, reasons:['Erreur API: ' + e.message] };
   }
 }
+async function scanAll(){
+  $('lastScan').textContent = 'Dernier scan : ' + nowText();
+  if(!APP.cfg.apiKey) return;
+  await scanMarket();
+  for(const item of APP.watchlist) await scanOne(item);
+  saveState(); renderWatchlist();
+}
+function renderWatchlist(){
+  const root = $('watchlist'); root.innerHTML = '';
+  if(!APP.watchlist.length){ root.innerHTML = '<div class="small">Aucune valeur surveillée.</div>'; return; }
+  APP.watchlist.forEach(item => {
+    const q = item.quote || {}, a = item.analysis || {}, change = q.pc ? (((q.c-q.pc)/q.pc)*100).toFixed(2) : '-';
+    const div = document.createElement('div'); div.className = 'item';
+    div.innerHTML = `
+      <div class="row">
+        <div class="col">
+          <strong>${item.symbol}</strong>
+          <span class="pill info">${item.kind}</span>
+          <span class="pill ${signalClass(a.signal || 'WAIT')}">${a.signal || 'WAIT'}</span>
+          <span class="pill info">${a.strategy || item.strategyMode || 'auto'}</span>
+        </div>
+        <div class="col" style="text-align:right;">
+          <div class="price">${q.c ? q.c.toFixed(2) : '-'}</div>
+          <div class="small">${change}% vs veille</div>
+        </div>
+      </div>
+      <div class="small">${item.notes || ''}</div>
+      <div class="kpi">
+        <div><div class="small">Entrée</div><div class="mono">${a.entry ?? '-'}</div></div>
+        <div><div class="small">Stop</div><div class="mono">${a.stop ?? '-'}</div></div>
+        <div><div class="small">Target</div><div class="mono">${a.target ?? '-'}</div></div>
+        <div><div class="small">Taille</div><div class="mono">${a.qty ?? '-'}</div></div>
+        <div><div class="small">Risque €/$</div><div class="mono">${a.riskValue ?? '-'}</div></div>
+        <div><div class="small">Score</div><div class="mono">${a.score ?? '-'}</div></div>
+      </div>
+      <div class="reason">${(a.reasons || []).map(r => '• ' + r).join('<br>') || 'Pas encore analysé'}</div>
+      <div class="row" style="margin-top:10px;">
+        <div class="col"><button onclick="manualScan('${item.id}')">Scanner maintenant</button></div>
+        <div class="col"><button class="badBtn" onclick="removeWatch('${item.id}')">Supprimer</button></div>
+      </div>`;
+    root.appendChild(div);
+  });
+}
+async function manualScan(id){ const item = APP.watchlist.find(x => x.id === id); if(!item) return; await scanOne(item); saveState(); renderWatchlist(); }
+window.manualScan = manualScan;
+function restartScan(){ if(APP.timer) clearInterval(APP.timer); APP.timer = setInterval(scanAll, (APP.cfg.scanInterval || 30) * 1000); }
 
-setInterval(scan,5000)
-
+loadState(); renderWatchlist(); restartScan(); if(APP.watchlist.length && APP.cfg.apiKey) scanAll();
 </script>
-
 </body>
 </html>
