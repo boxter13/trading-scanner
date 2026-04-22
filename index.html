@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scanner Opening 5 Bougies</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --card: #121933;
+      --muted: #9aa4c7;
+      --text: #eef2ff;
+      --good: #19c37d;
+      --bad: #ff5f6d;
+      --warn: #ffb020;
+      --line: #253056;
+      --accent: #6ea8fe;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: linear-gradient(180deg, #0b1020 0%, #0f1730 100%);
+      color: var(--text);
+    }
+    .wrap {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 14px;
+    }
+    h1, h2, h3 { margin: 0 0 10px; }
+    .grid {
+      display: grid;
+      gap: 12px;
+    }
+    .card {
+      background: rgba(18, 25, 51, 0.98);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 14px;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+    }
+    .row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .grow { flex: 1; }
+    input, select, button, textarea {
+      width: 100%;
+      border: 1px solid #33406d;
+      background: #0f1730;
+      color: var(--text);
+      padding: 12px;
+      border-radius: 12px;
+      font-size: 15px;
+    }
+    textarea { min-height: 90px; resize: vertical; }
+    button {
+      cursor: pointer;
+      font-weight: 700;
+      background: #18305e;
+    }
+    button.primary { background: #205fd6; }
+    button.good { background: #0e8d5c; }
+    button.bad { background: #b83b47; }
+    button.warn { background: #8a5b06; }
+    .pill {
+      display: inline-block;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      background: #0d142b;
+    }
+    .status-buy { color: #082516; background: #34d399; border-color: #34d399; }
+    .status-nobuy { color: #2c0a10; background: #ff8b94; border-color: #ff8b94; }
+    .status-wait { color: #2f2205; background: #ffd166; border-color: #ffd166; }
+    .muted { color: var(--muted); }
+    .small { font-size: 12px; }
+    .watch-item {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 12px;
+      margin-top: 10px;
+      background: #0f1730;
+    }
+    .price { font-size: 26px; font-weight: 800; }
+    .goodText { color: var(--good); }
+    .badText { color: var(--bad); }
+    .warnText { color: var(--warn); }
+    .kpi {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .kpi div {
+      background: #0d142b;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px;
+    }
+    .list {
+      display: grid;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .note {
+      border-left: 4px solid var(--accent);
+      padding: 10px 12px;
+      background: #101a36;
+      border-radius: 8px;
+      color: #dbe7ff;
+      margin-top: 8px;
+    }
+    .mono { font-family: monospace; }
+    .two {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+    @media (min-width: 820px) {
+      .two { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap grid">
+    <div class="card">
+      <h1>Scanner mobile — opening 5 bougies</h1>
+      <div class="note">
+        Outil d'aide à la décision. Il applique des règles simples de momentum, d'ouverture US, de continuation et de rejet. Il ne garantit pas un bon trade.
+      </div>
+    </div>
+
+    <div class="two">
+      <div class="card">
+        <h2>Configuration</h2>
+        <div class="grid">
+          <div>
+            <label>Clé API Finnhub</label>
+            <input id="apiKey" placeholder="Colle ta clé Finnhub" />
+          </div>
+          <div class="row">
+            <div class="grow">
+              <label>Fuseau</label>
+              <select id="timezone">
+                <option value="Europe/Paris">Europe/Paris</option>
+                <option value="America/New_York">America/New_York</option>
+              </select>
+            </div>
+            <div class="grow">
+              <label>Intervalle scan (sec)</label>
+              <select id="intervalSec">
+                <option>15</option>
+                <option selected>30</option>
+                <option>60</option>
+                <option>120</option>
+              </select>
+            </div>
+          </div>
+          <div class="row">
+            <button class="primary" id="saveConfigBtn">Sauvegarder config</button>
+            <button id="notifBtn">Activer notifications</button>
+          </div>
+          <div class="small muted">Astuce : crée une clé gratuite Finnhub puis colle-la ici. L'app garde tout en local sur ton téléphone.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Ajouter une action / ETF à surveiller</h2>
+        <div class="grid">
+          <div class="row">
+            <div class="grow"><input id="tickerInput" placeholder="Ex: NVDA, SPY, QQQ, MSFT, GOOGL" /></div>
+            <div style="width: 150px;"><select id="kindInput"><option value="stock">Action</option><option value="etf">ETF</option></select></div>
+          </div>
+          <div class="row">
+            <div class="grow"><input id="buyZoneLow" placeholder="Zone achat basse, ex 198" /></div>
+            <div class="grow"><input id="buyZoneHigh" placeholder="Zone achat haute, ex 200.5" /></div>
+          </div>
+          <div class="row">
+            <div class="grow"><input id="stopPct" placeholder="Stop % ex 0.8" value="0.8" /></div>
+            <div class="grow"><input id="targetPct" placeholder="Objectif % ex 1.5" value="1.5" /></div>
+          </div>
+          <div class="row">
+            <div class="grow"><input id="notesInput" placeholder="Notes perso, ex : attendre cassure des 5 bougies" /></div>
+          </div>
+          <button class="good" id="addWatchBtn">Ajouter à la watchlist</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <h2 class="grow">Watchlist</h2>
+        <span class="pill" id="marketState">Marché : inconnu</span>
+        <span class="pill" id="lastScan">Dernier scan : -</span>
+      </div>
+      <div id="watchlist"></div>
+    </div>
+
+    <div class="card">
+      <h2>Règles intégrées</h2>
+      <div class="list small muted">
+        <div>• Opening 5 bougies : préférence pour 5 bougies globalement haussières, avec clôture proche du haut et maintien au-dessus de l'ouverture.</div>
+        <div>• Continuation : cassure d'un plus haut local avec momentum et retracement limité.</div>
+        <div>• Rejet sommet : refus répété sous une résistance + perte de momentum = NO BUY.</div>
+        <div>• Cassure niveau psychologique : si le prix reperd vite 200 / 100 / 50 selon le titre = alerte faiblesse.</div>
+        <div>• Zone achat personnelle : si le prix entre dans ta zone ET que la structure est propre, alerte prioritaire.</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const state = {
+      config: {
+        apiKey: '',
+        timezone: 'Europe/Paris',
+        intervalSec: 30,
+      },
+      watchlist: [],
+      timer: null,
+      alerted: {},
+    };
+
+    const $ = (id) => document.getElementById(id);
+
+    function loadState() {
+      try {
+        const cfg = JSON.parse(localStorage.getItem('scanner_cfg') || '{}');
+        const wl = JSON.parse(localStorage.getItem('scanner_watchlist') || '[]');
+        state.config = { ...state.config, ...cfg };
+        state.watchlist = Array.isArray(wl) ? wl : [];
+      } catch (e) {
+        console.error(e);
+      }
+      $('apiKey').value = state.config.apiKey || '';
+      $('timezone').value = state.config.timezone || 'Europe/Paris';
+      $('intervalSec').value = String(state.config.intervalSec || 30);
+    }
+
+    function saveState() {
+      localStorage.setItem('scanner_cfg', JSON.stringify(state.config));
+      localStorage.setItem('scanner_watchlist', JSON.stringify(state.watchlist));
+    }
+
+    function uid() {
+      return Math.random().toString(36).slice(2, 10);
+    }
+
+    function nowParis() {
+      return new Date().toLocaleString('fr-FR', { timeZone: state.config.timezone || 'Europe/Paris' });
+    }
+
+    function parseNum(v) {
+      if (v === '' || v == null) return null;
+      const n = Number(String(v).replace(',', '.'));
+      return Number.isFinite(n) ? n : null;
+    }
+
+    async function requestNotifications() {
+      if (!('Notification' in window)) {
+        alert('Notifications non supportées sur ce navigateur.');
+        return;
+      }
+      const p = await Notification.requestPermission();
+      alert('Permission notifications : ' + p);
+    }
+
+    function notify(title, body) {
+      try {
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification(title, { body });
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function beep() {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.value = 880;
+        gain.gain.value = 0.03;
+        osc.start();
+        setTimeout(() => {
+          osc.stop();
+          ctx.close();
+        }, 180);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function getPsychLevel(price) {
+      if (!price) return null;
+      if (price >= 100) return Math.round(price / 5) * 5;
+      if (price >= 20) return Math.round(price);
+      return Math.round(price * 2) / 2;
+    }
+
+    async function fetchQuote(symbol) {
+      const key = state.config.apiKey.trim();
+      if (!key) throw new Error('Clé API manquante');
+      const url = `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(symbol)}&token=${encodeURIComponent(key)}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Erreur quote');
+      return res.json();
+    }
+
+    async function fetchCandles(symbol) {
+      const key = state.config.apiKey.trim();
+      if (!key) throw new Error('Clé API manquante');
+      const to = Math.floor(Date.now() / 1000);
+      const from = to - 60 * 60 * 24 * 12;
+      const url = `https://finnhub.io/api/v1/stock/candle?symbol=${encodeURIComponent(symbol)}&resolution=30&from=${from}&to=${to}&token=${encodeURIComponent(key)}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Erreur candles');
+      return res.json();
+    }
+
+    function isUsMarketOpen() {
+      const now = new Date();
+      const ny = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/New_York',
+        hour12: false,
+        weekday: 'short',
+        hour: '2-digit',
+        minute: '2-digit'
+      }).formatToParts(now);
+      const obj = Object.fromEntries(ny.map(p => [p.type, p.value]));
+      const hh = Number(obj.hour);
+      const mm = Number(obj.minute);
+      const day = obj.weekday;
+      const total = hh * 60 + mm;
+      const open = 9 * 60 + 30;
+      const close = 16 * 60;
+      const weekdayOk = !['Sat', 'Sun'].includes(day);
+      return weekdayOk && total >= open && total <= close;
+    }
+
+    function analyzeStructure(candles, quote, item) {
+      const out = {
+        signal: 'WAIT',
+        score: 0,
+        reasons: [],
+        entry: null,
+        stop: null,
+        target: null,
+      };
+
+      if (!candles || candles.s !== 'ok' || !candles.c || candles.c.length < 10) {
+        out.reasons.push('Pas assez de bougies');
+        return out;
+      }
+
+      const len = candles.c.length;
+      const opens = candles.o.slice(-10);
+      const highs = candles.h.slice(-10);
+      const lows = candles.l.slice(-10);
+      const closes = candles.c.slice(-10);
+
+      const last = closes[closes.length - 1];
+      const prev = closes[closes.length - 2];
+      const lastHigh = highs[highs.length - 1];
+      const lastLow = lows[lows.length - 1];
+      const dayMovePct = quote.pc ? ((quote.c - quote.pc) / quote.pc) * 100 : 0;
+      const psych = getPsychLevel(last);
+
+      let greenCount = 0;
+      for (let i = 0; i < 5 && i < closes.length; i++) {
+        const idx = closes.length - 1 - i;
+        if (closes[idx] > opens[idx]) greenCount += 1;
+      }
+
+      const recentHigh = Math.max(...highs.slice(-5));
+      const recentLow = Math.min(...lows.slice(-5));
+      const range = Math.max(0.01, recentHigh - recentLow);
+      const closePosition = (last - recentLow) / range;
+      const strongClose = closePosition > 0.7;
+      const breakout = last >= recentHigh * 0.997;
+      const pullback = last < prev;
+      const rejectionTop = (lastHigh - last) > (last - lastLow) * 1.2;
+
+      if (greenCount >= 4) {
+        out.score += 2;
+        out.reasons.push('Momentum haussier récent');
+      }
+      if (strongClose) {
+        out.score += 2;
+        out.reasons.push('Clôture proche du haut');
+      }
+      if (breakout) {
+        out.score += 2;
+        out.reasons.push('Cassure / retest du plus haut local');
+      }
+      if (dayMovePct > 0.4) {
+        out.score += 1;
+        out.reasons.push('Journée positive');
+      }
+      if (Math.abs(last - psych) / psych < 0.0025 && last >= psych) {
+        out.score += 1;
+        out.reasons.push('Au-dessus du niveau psychologique ' + psych);
+      }
+      if (rejectionTop) {
+        out.score -= 2;
+        out.reasons.push('Mèche haute / rejet sommet');
+      }
+      if (pullback && closes[closes.length - 3] > closes[closes.length - 2]) {
+        out.score -= 1;
+        out.reasons.push('Perte de momentum court terme');
+      }
+
+      const zoneLow = parseNum(item.buyZoneLow);
+      const zoneHigh = parseNum(item.buyZoneHigh);
+      if (zoneLow != null && zoneHigh != null) {
+        if (last >= zoneLow && last <= zoneHigh) {
+          out.score += 2;
+          out.reasons.push('Dans ta zone d\'achat');
+        } else {
+          out.reasons.push('Hors de ta zone d\'achat');
+        }
+      }
+
+      const stopPct = parseNum(item.stopPct) ?? 0.8;
+      const targetPct = parseNum(item.targetPct) ?? 1.5;
+      out.entry = last;
+      out.stop = +(last * (1 - stopPct / 100)).toFixed(2);
+      out.target = +(last * (1 + targetPct / 100)).toFixed(2);
+
+      if (out.score >= 6 && !rejectionTop) {
+        out.signal = 'BUY';
+      } else if (out.score <= 2 || rejectionTop) {
+        out.signal = 'NO BUY';
+      } else {
+        out.signal = 'WAIT';
+      }
+
+      return out;
+    }
+
+    function signalClass(signal) {
+      if (signal === 'BUY') return 'status-buy';
+      if (signal === 'NO BUY') return 'status-nobuy';
+      return 'status-wait';
+    }
+
+    function renderWatchlist() {
+      const root = $('watchlist');
+      root.innerHTML = '';
+      if (!state.watchlist.length) {
+        root.innerHTML = '<div class="muted">Aucune valeur surveillée pour le moment.</div>';
+        return;
+      }
+
+      state.watchlist.forEach((item) => {
+        const div = document.createElement('div');
+        div.className = 'watch-item';
+        const q = item.lastQuote || {};
+        const a = item.analysis || {};
+        const delta = q.pc ? (((q.c - q.pc) / q.pc) * 100).toFixed(2) : '-';
+        div.innerHTML = `
+          <div class="row">
+            <div class="grow">
+              <div class="row">
+                <strong>${item.symbol}</strong>
+                <span class="pill">${item.kind || 'stock'}</span>
+                <span class="pill ${signalClass(a.signal || 'WAIT')}">${a.signal || 'WAIT'}</span>
+              </div>
+              <div class="small muted">${item.notes || ''}</div>
+            </div>
+            <div style="min-width:130px; text-align:right;">
+              <div class="price ${q.c >= q.pc ? 'goodText' : 'badText'}">${q.c ? q.c.toFixed(2) : '-'}</div>
+              <div class="small ${q.c >= q.pc ? 'goodText' : 'badText'}">${delta}%</div>
+            </div>
+          </div>
+          <div class="kpi" style="margin-top:10px;">
+            <div><div class="small muted">Entrée</div><div class="mono">${a.entry ?? '-'}</div></div>
+            <div><div class="small muted">Stop</div><div class="mono">${a.stop ?? '-'}</div></div>
+            <div><div class="small muted">Target</div><div class="mono">${a.target ?? '-'}</div></div>
+            <div><div class="small muted">Score</div><div class="mono">${a.score ?? '-'}</div></div>
+          </div>
+          <div class="list small" style="margin-top:10px;">
+            ${(a.reasons || []).map(r => `<div>• ${r}</div>`).join('') || '<div class="muted">Pas encore analysé</div>'}
+          </div>
+          <div class="row" style="margin-top:10px;">
+            <button onclick="manualScan('${item.id}')">Scanner maintenant</button>
+            <button class="bad" onclick="removeWatch('${item.id}')">Supprimer</button>
+          </div>
+        `;
+        root.appendChild(div);
+      });
+    }
+
+    function maybeAlert(item) {
+      const signal = item.analysis?.signal;
+      const key = `${item.symbol}_${signal}_${Math.round(item.lastQuote?.c || 0)}`;
+      if (signal === 'BUY' && !state.alerted[key]) {
+        state.alerted[key] = true;
+        notify(`BUY ${item.symbol}`, `${item.symbol} : setup propre détecté vers ${item.lastQuote.c?.toFixed(2)}$`);
+        beep();
+      }
+      if (signal === 'NO BUY' && !state.alerted[key] && item.analysis?.reasons?.some(r => r.toLowerCase().includes('rejet'))) {
+        state.alerted[key] = true;
+        notify(`NO BUY ${item.symbol}`, `${item.symbol} : rejet / faiblesse détecté`);
+      }
+    }
+
+    async function scanOne(item) {
+      try {
+        const [quote, candles] = await Promise.all([fetchQuote(item.symbol), fetchCandles(item.symbol)]);
+        item.lastQuote = quote;
+        item.analysis = analyzeStructure(candles, quote, item);
+        maybeAlert(item);
+      } catch (e) {
+        item.analysis = { signal: 'WAIT', score: 0, reasons: ['Erreur API: ' + e.message] };
+      }
+    }
+
+    async function scanAll() {
+      $('marketState').textContent = 'Marché : ' + (isUsMarketOpen() ? 'US ouvert' : 'US fermé / hors horaires');
+      $('lastScan').textContent = 'Dernier scan : ' + nowParis();
+      for (const item of state.watchlist) {
+        await scanOne(item);
+      }
+      saveState();
+      renderWatchlist();
+    }
+
+    async function manualScan(id) {
+      const item = state.watchlist.find(x => x.id === id);
+      if (!item) return;
+      await scanOne(item);
+      saveState();
+      renderWatchlist();
+    }
+    window.manualScan = manualScan;
+
+    function removeWatch(id) {
+      state.watchlist = state.watchlist.filter(x => x.id !== id);
+      saveState();
+      renderWatchlist();
+    }
+    window.removeWatch = removeWatch;
+
+    function startTimer() {
+      if (state.timer) clearInterval(state.timer);
+      const ms = Number(state.config.intervalSec || 30) * 1000;
+      state.timer = setInterval(scanAll, ms);
+    }
+
+    $('saveConfigBtn').addEventListener('click', () => {
+      state.config.apiKey = $('apiKey').value.trim();
+      state.config.timezone = $('timezone').value;
+      state.config.intervalSec = Number($('intervalSec').value);
+      saveState();
+      startTimer();
+      scanAll();
+      alert('Configuration sauvegardée.');
+    });
+
+    $('notifBtn').addEventListener('click', requestNotifications);
+
+    $('addWatchBtn').addEventListener('click', () => {
+      const symbol = $('tickerInput').value.trim().toUpperCase();
+      if (!symbol) {
+        alert('Entre un ticker.');
+        return;
+      }
+      state.watchlist.push({
+        id: uid(),
+        symbol,
+        kind: $('kindInput').value,
+        buyZoneLow: $('buyZoneLow').value.trim(),
+        buyZoneHigh: $('buyZoneHigh').value.trim(),
+        stopPct: $('stopPct').value.trim(),
+        targetPct: $('targetPct').value.trim(),
+        notes: $('notesInput').value.trim(),
+      });
+      $('tickerInput').value = '';
+      $('buyZoneLow').value = '';
+      $('buyZoneHigh').value = '';
+      $('notesInput').value = '';
+      saveState();
+      renderWatchlist();
+      scanAll();
+    });
+
+    loadState();
+    renderWatchlist();
+    startTimer();
+    if (state.watchlist.length && state.config.apiKey) scanAll();
+  </script>
+</body>
+</html>
