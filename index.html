@@ -1,310 +1,7 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Scanner Pro Sans Candles</title>
-  <style>
-    :root{
-      --bg:#0b1020; --card:#121933; --line:#27345a; --text:#edf2ff; --muted:#9fb0d8;
-      --buy:#1fc77a; --sell:#ff6475; --wait:#ffbe3b; --late:#ff8f3b; --info:#6ea8fe;
-    }
-    *{box-sizing:border-box}
-    body{
-      margin:0;
-      background:linear-gradient(180deg,#0a1020,#0f1730);
-      color:var(--text);
-      font-family:Arial,Helvetica,sans-serif;
-    }
-    .wrap{max-width:1000px;margin:0 auto;padding:14px}
-    .card{
-      background:rgba(18,25,51,.98);
-      border:1px solid var(--line);
-      border-radius:18px;
-      padding:14px;
-      margin-bottom:12px;
-      box-shadow:0 10px 24px rgba(0,0,0,.25);
-    }
-    h1,h2{margin:0 0 10px}
-    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-    .col{flex:1;min-width:150px}
-    input,select,button{
-      width:100%;
-      padding:12px;
-      border-radius:12px;
-      border:1px solid #33406d;
-      background:#0f1730;
-      color:var(--text);
-      font-size:15px;
-    }
-    button{cursor:pointer;font-weight:700}
-    .primary{background:#2563eb;border-color:#2563eb}
-    .goodBtn{background:#0f8f5b;border-color:#0f8f5b}
-    .badBtn{background:#b42331;border-color:#b42331}
-    .pill{
-      display:inline-block;
-      padding:6px 10px;
-      border-radius:999px;
-      font-size:12px;
-      font-weight:700;
-      margin-right:6px;
-      margin-top:6px;
-    }
-    .buy{background:var(--buy);color:#062113}
-    .sell{background:var(--sell);color:#3d0710}
-    .wait{background:var(--wait);color:#442c02}
-    .late{background:var(--late);color:#431407}
-    .info{background:var(--info);color:#071e47}
-    .small{font-size:12px;color:var(--muted);line-height:1.45}
-    .item{
-      background:#0e1530;
-      border:1px solid var(--line);
-      border-radius:16px;
-      padding:12px;
-      margin-top:10px;
-    }
-    .price{font-size:28px;font-weight:800}
-    .kpi{
-      display:grid;
-      grid-template-columns:repeat(3,minmax(0,1fr));
-      gap:8px;
-      margin-top:10px;
-    }
-    .kpi div{
-      background:#0b1228;
-      border:1px solid var(--line);
-      border-radius:12px;
-      padding:10px;
-    }
-    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
-    .reason{margin-top:8px;font-size:13px;color:#dbeafe;text-align:left}
-    .hero{font-size:20px;font-weight:800}
-    .center{text-align:center}
-  </style>
-</head>
-<body>
-<div class="wrap">
-
-  <div class="card">
-    <div class="hero">Scanner Pro Sans Candles</div>
-    <div class="small">
-      Version compatible Finnhub gratuit. Elle utilise seulement les données quote :
-      prix actuel, open, plus haut, plus bas, clôture précédente.
-    </div>
-  </div>
-
-  <div class="card">
-    <h2>Configuration</h2>
-    <div class="row">
-      <div class="col"><input id="apiKey" placeholder="Clé API Finnhub" /></div>
-    </div>
-    <div class="row">
-      <div class="col">
-        <select id="scanInterval">
-          <option value="5">5 sec</option>
-          <option value="15" selected>15 sec</option>
-          <option value="30">30 sec</option>
-          <option value="60">60 sec</option>
-        </select>
-      </div>
-      <div class="col"><input id="capital" value="243" placeholder="Capital" /></div>
-      <div class="col"><input id="riskPct" value="1" placeholder="Risque % par trade" /></div>
-    </div>
-    <div class="row">
-      <div class="col"><input id="latePct" value="1.2" placeholder="Trop tard % ex 1.2" /></div>
-      <div class="col"><button class="primary" onclick="saveConfig()">Sauvegarder config</button></div>
-      <div class="col"><button onclick="enableNotif()">Activer notifications</button></div>
-    </div>
-  </div>
-
-  <div class="card">
-    <h2>Ajouter une valeur</h2>
-    <div class="row">
-      <div class="col"><input id="symbol" placeholder="Ticker ex NVDA, MSFT, GOOGL, SPY, QQQ" /></div>
-      <div class="col">
-        <select id="kind">
-          <option value="stock">Action</option>
-          <option value="etf">ETF</option>
-          <option value="index">Index</option>
-        </select>
-      </div>
-    </div>
-    <div class="row">
-      <div class="col"><input id="zoneLow" placeholder="Zone basse ex 198" /></div>
-      <div class="col"><input id="zoneHigh" placeholder="Zone haute ex 201" /></div>
-    </div>
-    <div class="row">
-      <div class="col"><input id="stopPct" value="0.8" placeholder="Stop % ex 0.8" /></div>
-      <div class="col"><input id="targetPct" value="1.5" placeholder="Target % ex 1.5" /></div>
-      <div class="col"><input id="notes" placeholder="Notes perso" /></div>
-    </div>
-    <button class="goodBtn" onclick="addWatch()">Ajouter</button>
-  </div>
-
-  <div class="card">
-    <div class="row">
-      <div class="col"><h2>Filtre marché</h2></div>
-      <div class="col small" id="marketBias">Biais marché : -</div>
-      <div class="col small" id="lastScan">Dernier scan : -</div>
-    </div>
-    <div class="row">
-      <div class="col small" id="spyState">SPY : -</div>
-      <div class="col small" id="qqqState">QQQ : -</div>
-    </div>
-  </div>
-
-  <div class="card center">
-    <h2>Panneau simple</h2>
-    <div id="simpleBoard" class="hero">-</div>
-    <div class="small">Verdict global le plus important du moment.</div>
-  </div>
-
-  <div class="card">
-    <h2>Watchlist</h2>
-    <div id="watchlist"></div>
-  </div>
-
-</div>
-
-<script>
-const APP = {
-  cfg: { apiKey:'', scanInterval:15, capital:243, riskPct:1, latePct:1.2 },
-  watchlist: [],
-  timer: null,
-  alerted: {},
-  market: {}
-};
-
-function $(id){ return document.getElementById(id); }
-function parseNum(v){ const n = Number(String(v).replace(',', '.')); return Number.isFinite(n) ? n : null; }
-function round(n){ return Math.round(n*100)/100; }
-function uid(){ return Math.random().toString(36).slice(2,10); }
-function nowText(){ return new Date().toLocaleString('fr-FR', { timeZone:'Europe/Paris' }); }
-
-function loadState(){
-  try{
-    APP.cfg = { ...APP.cfg, ...(JSON.parse(localStorage.getItem('sanscandles_cfg')||'{}')) };
-    APP.watchlist = JSON.parse(localStorage.getItem('sanscandles_watchlist')||'[]');
-  }catch(e){}
-  $('apiKey').value = APP.cfg.apiKey || '';
-  $('scanInterval').value = String(APP.cfg.scanInterval || 15);
-  $('capital').value = APP.cfg.capital || 243;
-  $('riskPct').value = APP.cfg.riskPct || 1;
-  $('latePct').value = APP.cfg.latePct || 1.2;
-}
-
-function saveState(){
-  localStorage.setItem('sanscandles_cfg', JSON.stringify(APP.cfg));
-  localStorage.setItem('sanscandles_watchlist', JSON.stringify(APP.watchlist));
-}
-
-function saveConfig(){
-  APP.cfg.apiKey = $('apiKey').value.trim();
-  APP.cfg.scanInterval = Number($('scanInterval').value);
-  APP.cfg.capital = parseNum($('capital').value) ?? 243;
-  APP.cfg.riskPct = parseNum($('riskPct').value) ?? 1;
-  APP.cfg.latePct = parseNum($('latePct').value) ?? 1.2;
-  saveState();
-  restartScan();
-  alert('Configuration sauvegardée');
-}
-
-async function enableNotif(){
-  if(!('Notification' in window)) return alert('Notifications non supportées');
-  const p = await Notification.requestPermission();
-  alert('Permission : ' + p);
-}
-
-function notify(title, body){
-  if('Notification' in window && Notification.permission === 'granted'){
-    new Notification(title, { body });
-  }
-}
-
-function addWatch(){
-  const symbol = $('symbol').value.trim().toUpperCase();
-  if(!symbol) return alert('Entre un ticker');
-  APP.watchlist.push({
-    id: uid(),
-    symbol,
-    kind: $('kind').value,
-    zoneLow: $('zoneLow').value.trim(),
-    zoneHigh: $('zoneHigh').value.trim(),
-    stopPct: $('stopPct').value.trim(),
-    targetPct: $('targetPct').value.trim(),
-    notes: $('notes').value.trim()
-  });
-  $('symbol').value = '';
-  $('zoneLow').value = '';
-  $('zoneHigh').value = '';
-  $('notes').value = '';
-  saveState();
-  renderWatchlist();
-  scanAll();
-}
-
-function removeWatch(id){
-  APP.watchlist = APP.watchlist.filter(x => x.id !== id);
-  saveState();
-  renderWatchlist();
-}
-window.removeWatch = removeWatch;
-
-async function fetchQuote(symbol){
-  const key = APP.cfg.apiKey.trim();
-  if(!key) throw new Error('Clé API manquante');
-  const r = await fetch(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(symbol)}&token=${encodeURIComponent(key)}`);
-  if(!r.ok) throw new Error('Erreur quote');
-  return r.json();
-}
-
-function marketFilter(spy, qqq){
-  let score = 0;
-  let reasons = [];
-
-  if(spy.c > spy.o){ score += 1; reasons.push('SPY > open'); }
-  if(qqq.c > qqq.o){ score += 1; reasons.push('QQQ > open'); }
-
-  const spyDay = spy.pc ? ((spy.c - spy.pc)/spy.pc)*100 : 0;
-  const qqqDay = qqq.pc ? ((qqq.c - qqq.pc)/qqq.pc)*100 : 0;
-
-  if(spyDay > 0.2){ score += 1; reasons.push('SPY positif'); }
-  if(qqqDay > 0.2){ score += 1; reasons.push('QQQ positif'); }
-
-  let bias = 'NEUTRE';
-  if(score >= 3) bias = 'BULL';
-  else if(score <= 1) bias = 'FAIBLE';
-
-  return {
-    score,
-    bias,
-    reasons,
-    allowBuy: score >= 3,
-    allowShort: score <= 1
-  };
-}
-
-function psychLevel(price){
-  if(!price) return null;
-  if(price >= 100) return Math.round(price / 5) * 5;
-  if(price >= 20) return Math.round(price);
-  return Math.round(price * 2) / 2;
-}
-
-function calcPosition(entry, stop){
-  const perUnitRisk = Math.max(0.01, Math.abs(entry - stop));
-  const riskMoney = APP.cfg.capital * (APP.cfg.riskPct / 100);
-  const qty = Math.max(0, Math.floor(riskMoney / perUnitRisk));
-  return {
-    perUnitRisk: round(perUnitRisk),
-    riskMoney: round(riskMoney),
-    qty
-  };
-}
-
 function analyzeQuoteOnly(symbol, q, item, market){
+
   const a = {
-    signal: 'WAIT',
+    signal: 'NO BUY',
     score: 0,
     reasons: [],
     entry: null,
@@ -323,212 +20,48 @@ function analyzeQuoteOnly(symbol, q, item, market){
   const open = q.o;
   const high = q.h;
   const low = q.l;
-  const prevClose = q.pc;
 
-  const dayMoveFromOpen = ((current - open) / open) * 100;
-  const dayMoveFromPrev = ((current - prevClose) / prevClose) * 100;
-  const closeNearHigh = ((high - current) / Math.max(0.01, high - low)) < 0.35;
-  const strongAboveOpen = current > open;
-  const strongAbovePrev = current > prevClose;
-  const brokeDayHigh = current >= high * 0.998;
-  const weakBelowOpen = current < open;
-  const nearLow = ((current - low) / Math.max(0.01, high - low)) < 0.25;
-  const psych = psychLevel(current);
+  const moveFromOpen = ((current - open) / open) * 100;
+  const range = Math.max(0.01, high - low);
 
-  if(strongAboveOpen){ a.score += 2; a.reasons.push('Prix > open'); }
-  if(strongAbovePrev){ a.score += 1; a.reasons.push('Prix > clôture veille'); }
-  if(closeNearHigh){ a.score += 2; a.reasons.push('Prix proche du plus haut du jour'); }
-  if(brokeDayHigh){ a.score += 2; a.reasons.push('Cassure / test du plus haut du jour'); }
-  if(dayMoveFromOpen > 0.25){ a.score += 1; a.reasons.push('Momentum haussier'); }
+  const closeNearHigh = (high - current) / range < 0.25;
+  const strongMove = moveFromOpen > 0.3;
+  const notTooLate = moveFromOpen < 1.5;
+  const aboveOpen = current > open;
 
-  if(market.allowBuy){ a.score += 2; a.reasons.push('Marché favorable'); }
-  else { a.score -= 2; a.reasons.push('Marché non favorable'); }
+  const zl = parseNum(item.zoneLow);
+  const zh = parseNum(item.zoneHigh);
+  let inZone = true;
 
-  if(weakBelowOpen){ a.score -= 2; a.reasons.push('Sous l’open'); }
-  if(nearLow){ a.score -= 2; a.reasons.push('Faiblesse proche du plus bas'); }
-
-  if(Math.abs(current - psych) / psych < 0.0025 && current < psych){
-    a.score -= 1;
-    a.reasons.push('Sous niveau psychologique ' + psych);
+  if(zl != null && zh != null){
+    inZone = current >= zl && current <= zh;
   }
 
-  const zoneLow = parseNum(item.zoneLow);
-  const zoneHigh = parseNum(item.zoneHigh);
-  if(zoneLow != null && zoneHigh != null){
-    if(current >= zoneLow && current <= zoneHigh){
-      a.score += 2;
-      a.reasons.push('Dans ta zone perso');
-    } else {
-      a.reasons.push('Hors zone perso');
-    }
+  // 🔥 CONDITIONS SNIPER
+  const sniperBuy =
+    market.allowBuy &&
+    aboveOpen &&
+    closeNearHigh &&
+    strongMove &&
+    notTooLate &&
+    inZone;
+
+  if(sniperBuy){
+    a.signal = 'BUY';
+    a.score = 10;
+    a.reasons.push('SNIPER VALIDÉ');
+  } else {
+    a.signal = 'NO BUY';
   }
 
-  if(dayMoveFromOpen > APP.cfg.latePct){
-    a.signal = 'TROP TARD';
-    a.reasons.push('Déjà trop étendu depuis l’open');
-  }
+  // Gestion position
+  a.entry = Math.round(current * 100) / 100;
+  a.stop = Math.round(current * (1 - (parseNum(item.stopPct) ?? 0.8)/100) * 100) / 100;
+  a.target = Math.round(current * (1 + (parseNum(item.targetPct) ?? 1.5)/100) * 100) / 100;
 
-  if(weakBelowOpen && nearLow && market.allowShort){
-    a.signal = 'SHORT possible';
-    a.reasons.push('Faiblesse + marché faible');
-  }
-
-  a.entry = round(current);
-  a.stop = round(current * (1 - (parseNum(item.stopPct) ?? 0.8) / 100));
-  a.target = round(current * (1 + (parseNum(item.targetPct) ?? 1.5) / 100));
-
-  const pos = calcPosition(a.entry, a.stop);
-  a.qty = pos.qty;
-  a.riskValue = pos.riskMoney;
-
-  if(a.signal !== 'TROP TARD' && a.signal !== 'SHORT possible'){
-    if(a.score >= 6) a.signal = 'BUY';
-    else if(a.score <= 2) a.signal = 'NO BUY';
-    else a.signal = 'WAIT';
-  }
+  const risk = APP.cfg.capital * (APP.cfg.riskPct / 100);
+  const perShare = Math.abs(a.entry - a.stop);
+  a.qty = Math.floor(risk / perShare);
 
   return a;
 }
-
-async function scanMarket(){
-  const [spy, qqq] = await Promise.all([fetchQuote('SPY'), fetchQuote('QQQ')]);
-  APP.market.spy = spy;
-  APP.market.qqq = qqq;
-  APP.market.filter = marketFilter(spy, qqq);
-
-  $('spyState').textContent = `SPY : ${round(spy.c)} | open ${round(spy.o)}`;
-  $('qqqState').textContent = `QQQ : ${round(qqq.c)} | open ${round(qqq.o)}`;
-  $('marketBias').textContent = `Biais marché : ${APP.market.filter.bias}`;
-}
-
-function signalClass(s){
-  if(s === 'BUY') return 'buy';
-  if(s === 'NO BUY' || s === 'SHORT possible') return 'sell';
-  if(s === 'TROP TARD') return 'late';
-  return 'wait';
-}
-
-async function scanOne(item){
-  try{
-    const q = await fetchQuote(item.symbol);
-    item.quote = q;
-    item.analysis = analyzeQuoteOnly(item.symbol, q, item, APP.market.filter || { allowBuy:true, allowShort:false });
-    item.lastScan = nowText();
-
-    const sig = item.analysis.signal;
-    const key = `${item.symbol}_${sig}_${Math.round(q.c || 0)}`;
-    if((sig === 'BUY' || sig === 'TROP TARD' || sig === 'SHORT possible') && !APP.alerted[key]){
-      APP.alerted[key] = true;
-      notify(`${item.symbol} ${sig}`, (item.analysis.reasons || []).slice(0,2).join(' | '));
-    }
-  }catch(e){
-    item.analysis = {
-      signal: 'WAIT',
-      score: 0,
-      reasons: ['Erreur API: ' + e.message]
-    };
-  }
-}
-
-async function scanAll(){
-  $('lastScan').textContent = 'Dernier scan : ' + nowText();
-  if(!APP.cfg.apiKey) return;
-  await scanMarket();
-  for(const item of APP.watchlist){
-    await scanOne(item);
-  }
-  saveState();
-  renderWatchlist();
-  renderSimpleBoard();
-}
-
-function renderSimpleBoard(){
-  const board = $('simpleBoard');
-  if(!APP.watchlist.length){
-    board.innerHTML = '-';
-    return;
-  }
-  const signals = APP.watchlist.map(x => x.analysis?.signal).filter(Boolean);
-  if(signals.includes('BUY')) board.innerHTML = '<span class="pill buy">BUY</span>';
-  else if(signals.includes('SHORT possible')) board.innerHTML = '<span class="pill sell">SHORT</span>';
-  else if(signals.includes('TROP TARD')) board.innerHTML = '<span class="pill late">TROP TARD</span>';
-  else if(signals.includes('NO BUY')) board.innerHTML = '<span class="pill sell">NO BUY</span>';
-  else board.innerHTML = '<span class="pill wait">WAIT</span>';
-}
-
-function renderWatchlist(){
-  const root = $('watchlist');
-  root.innerHTML = '';
-
-  if(!APP.watchlist.length){
-    root.innerHTML = '<div class="small">Aucune valeur surveillée.</div>';
-    return;
-  }
-
-  APP.watchlist.forEach(item => {
-    const q = item.quote || {};
-    const a = item.analysis || {};
-    const change = q.pc ? (((q.c - q.pc)/q.pc)*100).toFixed(2) : '-';
-
-    const div = document.createElement('div');
-    div.className = 'item';
-    div.innerHTML = `
-      <div class="row">
-        <div class="col">
-          <strong>${item.symbol}</strong>
-          <span class="pill info">${item.kind}</span>
-          <span class="pill ${signalClass(a.signal || 'WAIT')}">${a.signal || 'WAIT'}</span>
-        </div>
-        <div class="col" style="text-align:right;">
-          <div class="price">${q.c ? q.c.toFixed(2) : '-'}</div>
-          <div class="small">${change}% vs veille</div>
-        </div>
-      </div>
-
-      <div class="small">${item.notes || ''}</div>
-
-      <div class="kpi">
-        <div><div class="small">Entrée</div><div class="mono">${a.entry ?? '-'}</div></div>
-        <div><div class="small">Stop</div><div class="mono">${a.stop ?? '-'}</div></div>
-        <div><div class="small">Target</div><div class="mono">${a.target ?? '-'}</div></div>
-        <div><div class="small">Taille</div><div class="mono">${a.qty ?? '-'}</div></div>
-        <div><div class="small">Risque</div><div class="mono">${a.riskValue ?? '-'}</div></div>
-        <div><div class="small">Score</div><div class="mono">${a.score ?? '-'}</div></div>
-      </div>
-
-      <div class="reason">
-        ${(a.reasons || []).map(r => '• ' + r).join('<br>') || 'Pas encore analysé'}
-      </div>
-
-      <div class="row" style="margin-top:10px;">
-        <div class="col"><button onclick="manualScan('${item.id}')">Scanner maintenant</button></div>
-        <div class="col"><button class="badBtn" onclick="removeWatch('${item.id}')">Supprimer</button></div>
-      </div>
-    `;
-    root.appendChild(div);
-  });
-}
-
-async function manualScan(id){
-  const item = APP.watchlist.find(x => x.id === id);
-  if(!item) return;
-  await scanOne(item);
-  saveState();
-  renderWatchlist();
-  renderSimpleBoard();
-}
-window.manualScan = manualScan;
-
-function restartScan(){
-  if(APP.timer) clearInterval(APP.timer);
-  APP.timer = setInterval(scanAll, (APP.cfg.scanInterval || 15) * 1000);
-}
-
-loadState();
-renderWatchlist();
-renderSimpleBoard();
-restartScan();
-if(APP.watchlist.length && APP.cfg.apiKey) scanAll();
-</script>
-</body>
-</html>
