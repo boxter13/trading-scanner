@@ -4,10 +4,74 @@
   <title>Trading Scanner</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
-<body style="font-family:Arial; text-align:center; margin-top:50px;">
 
-<h1>🔥 SCANNER OK 🔥</h1>
-<p>Ton site fonctionne</p>
+<body style="font-family:Arial; text-align:center; background:#111; color:#fff;">
+
+<h2>📈 Trading Scanner</h2>
+
+<input id="apiKey" placeholder="Clé API Finnhub" style="width:90%; padding:10px"><br><br>
+
+<input id="symbol" placeholder="Ex: NVDA" style="width:90%; padding:10px"><br><br>
+
+<button onclick="addSymbol()" style="padding:10px; background:green; color:white;">Ajouter</button>
+
+<h3>📊 Watchlist</h3>
+<div id="list"></div>
+
+<script>
+let symbols = []
+
+function addSymbol(){
+  let s = document.getElementById("symbol").value.toUpperCase()
+  if(!s) return
+  symbols.push(s)
+  updateList()
+}
+
+function updateList(){
+  let html = ""
+  symbols.forEach(s=>{
+    html += "<div id='"+s+"'>"+s+" : chargement...</div>"
+  })
+  document.getElementById("list").innerHTML = html
+}
+
+async function scan(){
+  let key = document.getElementById("apiKey").value
+  if(!key) return
+
+  for(let s of symbols){
+    try{
+      let r = await fetch(`https://finnhub.io/api/v1/quote?symbol=${s}&token=${key}`)
+      let d = await r.json()
+
+      let price = d.c
+      let open = d.o
+
+      let signal = "WAIT"
+      let color = "orange"
+
+      if(price > open){
+        signal = "BUY"
+        color = "green"
+      }
+
+      if(price < open){
+        signal = "NO BUY"
+        color = "red"
+      }
+
+      document.getElementById(s).innerHTML =
+        s + " : $" + price + " → <b style='color:"+color+"'>" + signal + "</b>"
+
+    }catch(e){
+      document.getElementById(s).innerHTML = s + " erreur"
+    }
+  }
+}
+
+setInterval(scan, 5000)
+</script>
 
 </body>
 </html>
