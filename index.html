@@ -1,77 +1,556 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
-  <title>Trading Scanner</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scanner Pro 5 Bougies</title>
+  <style>
+    body{
+      margin:0;
+      font-family:Arial,Helvetica,sans-serif;
+      background:#0f172a;
+      color:#fff;
+      padding:16px;
+    }
+    .wrap{max-width:980px;margin:0 auto;}
+    .card{
+      background:#111827;
+      border:1px solid #25314f;
+      border-radius:16px;
+      padding:14px;
+      margin-bottom:14px;
+    }
+    h1,h2,h3{margin:0 0 10px 0;}
+    input,button,select{
+      width:100%;
+      padding:12px;
+      border-radius:12px;
+      border:1px solid #334155;
+      background:#0b1220;
+      color:#fff;
+      margin-top:8px;
+      font-size:15px;
+      box-sizing:border-box;
+    }
+    button{cursor:pointer;font-weight:700;}
+    .primary{background:#2563eb;border-color:#2563eb;}
+    .good{background:#0f8f5b;border-color:#0f8f5b;}
+    .bad{background:#b91c1c;border-color:#b91c1c;}
+    .row{display:flex;gap:10px;flex-wrap:wrap;}
+    .col{flex:1;min-width:140px;}
+    .pill{
+      display:inline-block;
+      padding:6px 10px;
+      border-radius:999px;
+      font-size:12px;
+      margin-right:6px;
+      margin-top:6px;
+      font-weight:700;
+    }
+    .buy{background:#22c55e;color:#052e16;}
+    .nobuy{background:#fb7185;color:#4c0519;}
+    .wait{background:#fbbf24;color:#422006;}
+    .late{background:#f97316;color:#431407;}
+    .muted{color:#94a3b8;}
+    .item{
+      background:#0b1220;
+      border:1px solid #25314f;
+      border-radius:14px;
+      padding:12px;
+      margin-top:12px;
+    }
+    .price{font-size:28px;font-weight:800;}
+    .small{font-size:12px;color:#cbd5e1;line-height:1.5;}
+    .kpi{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:8px;
+      margin-top:10px;
+    }
+    .kpi div{
+      background:#0f172a;
+      border:1px solid #25314f;
+      border-radius:10px;
+      padding:8px;
+    }
+    .reason{margin-top:8px;font-size:13px;color:#dbeafe;}
+  </style>
 </head>
+<body>
+<div class="wrap">
 
-<body style="font-family:Arial; text-align:center; background:#111; color:#fff;">
+  <div class="card">
+    <h1>📈 Scanner ultra pro — 5 premières bougies US</h1>
+    <div class="small">
+      Règle principale : le signal est basé sur les 5 bougies de l’ouverture US.
+      Heure NY : 09:30 à 09:34. Heure Paris : 15:30 à 15:34.
+    </div>
+  </div>
 
-<h2>📈 Trading Scanner</h2>
+  <div class="card">
+    <h2>Configuration</h2>
+    <input id="apiKey" placeholder="Clé API Finnhub" />
+    <div class="row">
+      <div class="col">
+        <select id="scanInterval">
+          <option value="15">Scan toutes les 15 sec</option>
+          <option value="30" selected>Scan toutes les 30 sec</option>
+          <option value="60">Scan toutes les 60 sec</option>
+        </select>
+      </div>
+      <div class="col">
+        <select id="timezoneMode">
+          <option value="Europe/Paris" selected>Heure Paris</option>
+          <option value="America/New_York">Heure New York</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col"><button class="primary" onclick="saveConfig()">Sauvegarder config</button></div>
+      <div class="col"><button onclick="enableNotif()">Activer notifications</button></div>
+    </div>
+  </div>
 
-<input id="apiKey" placeholder="Clé API Finnhub" style="width:90%; padding:10px"><br><br>
+  <div class="card">
+    <h2>Ajouter une valeur à surveiller</h2>
+    <div class="row">
+      <div class="col"><input id="symbol" placeholder="Ex: NVDA, MSFT, GOOGL, SPY, QQQ" /></div>
+      <div class="col">
+        <select id="kind">
+          <option value="stock">Action</option>
+          <option value="etf">ETF</option>
+          <option value="index">Index</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col"><input id="zoneLow" placeholder="Zone achat basse ex 198" /></div>
+      <div class="col"><input id="zoneHigh" placeholder="Zone achat haute ex 200.5" /></div>
+    </div>
+    <div class="row">
+      <div class="col"><input id="stopPct" value="0.8" placeholder="Stop % ex 0.8" /></div>
+      <div class="col"><input id="targetPct" value="1.5" placeholder="Target % ex 1.5" /></div>
+    </div>
+    <input id="notes" placeholder="Notes perso" />
+    <button class="good" onclick="addSymbol()">Ajouter à la watchlist</button>
+  </div>
 
-<input id="symbol" placeholder="Ex: NVDA" style="width:90%; padding:10px"><br><br>
+  <div class="card">
+    <div class="row">
+      <div class="col"><h2>Watchlist</h2></div>
+      <div class="col small" id="marketInfo">Marché : -</div>
+      <div class="col small" id="scanInfo">Dernier scan : -</div>
+    </div>
+    <div id="watchlist"></div>
+  </div>
 
-<button onclick="addSymbol()" style="padding:10px; background:green; color:white;">Ajouter</button>
-
-<h3>📊 Watchlist</h3>
-<div id="list"></div>
+</div>
 
 <script>
-let symbols = []
+const APP = {
+  config: {
+    apiKey: '',
+    scanInterval: 30,
+    timezoneMode: 'Europe/Paris'
+  },
+  watchlist: [],
+  timer: null,
+  alerted: {}
+};
 
-function addSymbol(){
-  let s = document.getElementById("symbol").value.toUpperCase()
-  if(!s) return
-  symbols.push(s)
-  updateList()
+function $(id){ return document.getElementById(id); }
+
+function loadState(){
+  try{
+    APP.config = {...APP.config, ...JSON.parse(localStorage.getItem('pro5_cfg') || '{}')};
+    APP.watchlist = JSON.parse(localStorage.getItem('pro5_watchlist') || '[]');
+  }catch(e){}
+  $('apiKey').value = APP.config.apiKey || '';
+  $('scanInterval').value = String(APP.config.scanInterval || 30);
+  $('timezoneMode').value = APP.config.timezoneMode || 'Europe/Paris';
 }
 
-function updateList(){
-  let html = ""
-  symbols.forEach(s=>{
-    html += "<div id='"+s+"'>"+s+" : chargement...</div>"
-  })
-  document.getElementById("list").innerHTML = html
+function saveState(){
+  localStorage.setItem('pro5_cfg', JSON.stringify(APP.config));
+  localStorage.setItem('pro5_watchlist', JSON.stringify(APP.watchlist));
 }
 
-async function scan(){
-  let key = document.getElementById("apiKey").value
-  if(!key) return
+function saveConfig(){
+  APP.config.apiKey = $('apiKey').value.trim();
+  APP.config.scanInterval = Number($('scanInterval').value);
+  APP.config.timezoneMode = $('timezoneMode').value;
+  saveState();
+  restartScan();
+  alert('Configuration sauvegardée.');
+}
 
-  for(let s of symbols){
-    try{
-      let r = await fetch(`https://finnhub.io/api/v1/quote?symbol=${s}&token=${key}`)
-      let d = await r.json()
+async function enableNotif(){
+  if(!('Notification' in window)){
+    alert('Notifications non supportées.');
+    return;
+  }
+  const p = await Notification.requestPermission();
+  alert('Permission : ' + p);
+}
 
-      let price = d.c
-      let open = d.o
-
-      let signal = "WAIT"
-      let color = "orange"
-
-      if(price > open){
-        signal = "BUY"
-        color = "green"
-      }
-
-      if(price < open){
-        signal = "NO BUY"
-        color = "red"
-      }
-
-      document.getElementById(s).innerHTML =
-        s + " : $" + price + " → <b style='color:"+color+"'>" + signal + "</b>"
-
-    }catch(e){
-      document.getElementById(s).innerHTML = s + " erreur"
-    }
+function notify(title, body){
+  if('Notification' in window && Notification.permission === 'granted'){
+    new Notification(title, { body });
   }
 }
 
-setInterval(scan, 5000)
-</script>
+function addSymbol(){
+  const symbol = $('symbol').value.trim().toUpperCase();
+  if(!symbol) return alert('Entre un ticker.');
+  APP.watchlist.push({
+    id: Math.random().toString(36).slice(2,10),
+    symbol,
+    kind: $('kind').value,
+    zoneLow: $('zoneLow').value.trim(),
+    zoneHigh: $('zoneHigh').value.trim(),
+    stopPct: $('stopPct').value.trim(),
+    targetPct: $('targetPct').value.trim(),
+    notes: $('notes').value.trim()
+  });
+  $('symbol').value = '';
+  $('zoneLow').value = '';
+  $('zoneHigh').value = '';
+  $('notes').value = '';
+  saveState();
+  render();
+  scanAll();
+}
 
+function removeSymbol(id){
+  APP.watchlist = APP.watchlist.filter(x => x.id !== id);
+  saveState();
+  render();
+}
+window.removeSymbol = removeSymbol;
+
+function parseNum(v){
+  if(v === '' || v == null) return null;
+  const n = Number(String(v).replace(',', '.'));
+  return Number.isFinite(n) ? n : null;
+}
+
+function getNowInNYParts(){
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone:'America/New_York',
+    weekday:'short',
+    hour:'2-digit',
+    minute:'2-digit',
+    hour12:false
+  }).formatToParts(new Date());
+  return Object.fromEntries(parts.map(p => [p.type, p.value]));
+}
+
+function isUsOpen(){
+  const p = getNowInNYParts();
+  const day = p.weekday;
+  const total = Number(p.hour)*60 + Number(p.minute);
+  return !['Sat','Sun'].includes(day) && total >= 570 && total <= 960;
+}
+
+function nowDisplay(){
+  return new Date().toLocaleString('fr-FR', { timeZone: APP.config.timezoneMode || 'Europe/Paris' });
+}
+
+async function fetchQuote(symbol){
+  const key = APP.config.apiKey.trim();
+  if(!key) throw new Error('Clé API manquante');
+  const url = `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(symbol)}&token=${encodeURIComponent(key)}`;
+  const r = await fetch(url);
+  if(!r.ok) throw new Error('Erreur quote');
+  return r.json();
+}
+
+async function fetch1mCandles(symbol){
+  const key = APP.config.apiKey.trim();
+  if(!key) throw new Error('Clé API manquante');
+  const to = Math.floor(Date.now()/1000);
+  const from = to - 60*60*24*2;
+  const url = `https://finnhub.io/api/v1/stock/candle?symbol=${encodeURIComponent(symbol)}&resolution=1&from=${from}&to=${to}&token=${encodeURIComponent(key)}`;
+  const r = await fetch(url);
+  if(!r.ok) throw new Error('Erreur candles');
+  return r.json();
+}
+
+function tsToNyHHMM(ts){
+  return new Date(ts*1000).toLocaleTimeString('en-GB', {
+    timeZone:'America/New_York',
+    hour:'2-digit',
+    minute:'2-digit',
+    hour12:false
+  });
+}
+
+function buildCandleObjects(c){
+  if(!c || c.s !== 'ok') return [];
+  const arr = [];
+  for(let i=0;i<c.t.length;i++){
+    arr.push({
+      t: c.t[i],
+      hhmm: tsToNyHHMM(c.t[i]),
+      o: c.o[i],
+      h: c.h[i],
+      l: c.l[i],
+      cl: c.c[i],
+      v: c.v[i]
+    });
+  }
+  return arr;
+}
+
+function analyzeOpening5(candles, quote, item){
+  const res = {
+    signal:'WAIT',
+    reasons:[],
+    score:0,
+    entry:null,
+    stop:null,
+    target:null
+  };
+
+  const open5 = candles.filter(x => x.hhmm >= '09:30' && x.hhmm <= '09:34');
+  if(open5.length < 5){
+    res.signal = 'WAIT';
+    res.reasons.push('Les 5 premières bougies ne sont pas encore complètes.');
+    return res;
+  }
+
+  const first = open5[0];
+  const fifth = open5[4];
+  const high4 = Math.max(...open5.slice(0,4).map(x => x.h));
+  const low5 = Math.min(...open5.map(x => x.l));
+  const high5 = Math.max(...open5.map(x => x.h));
+
+  const greenCount = open5.filter(x => x.cl > x.o).length;
+  const closeNearHigh = (fifth.h - fifth.cl) <= (fifth.h - fifth.l) * 0.35;
+  const breakout = fifth.cl > high4;
+  const holdAboveOpen1 = open5.slice(1).every(x => x.cl >= first.o * 0.997);
+  const noBigRejection = ((high5 - fifth.cl) / Math.max(0.01, high5 - low5)) < 0.45;
+
+  if(greenCount >= 4){ res.score += 2; res.reasons.push('4+ bougies vertes sur 5'); }
+  if(closeNearHigh){ res.score += 2; res.reasons.push('5e bougie clôture près du haut'); }
+  if(breakout){ res.score += 2; res.reasons.push('Cassure du plus haut des 4 premières'); }
+  if(holdAboveOpen1){ res.score += 1; res.reasons.push('Prix maintenu au-dessus de l’ouverture'); }
+  if(noBigRejection){ res.score += 1; res.reasons.push('Pas de gros rejet sommet'); }
+
+  const lateRef = high5;
+  const current = quote.c;
+  const tooLatePct = ((current - lateRef) / lateRef) * 100;
+  if(tooLatePct > 1.2){
+    res.signal = 'TROP TARD';
+    res.reasons.push('Le prix est déjà trop étendu après le setup opening.');
+  }
+
+  const psych = getPsychLevel(current);
+  if(Math.abs(current - psych)/psych < 0.002 && current < psych){
+    res.score -= 2;
+    res.reasons.push('Sous niveau psychologique ' + psych);
+  }
+
+  const zoneLow = parseNum(item.zoneLow);
+  const zoneHigh = parseNum(item.zoneHigh);
+  if(zoneLow != null && zoneHigh != null){
+    if(current >= zoneLow && current <= zoneHigh){
+      res.score += 2;
+      res.reasons.push('Dans ta zone d’achat');
+    } else {
+      res.reasons.push('Hors de ta zone d’achat');
+    }
+  }
+
+  const stopPct = parseNum(item.stopPct) ?? 0.8;
+  const targetPct = parseNum(item.targetPct) ?? 1.5;
+
+  res.entry = +current.toFixed(2);
+  res.stop = +(current * (1 - stopPct/100)).toFixed(2);
+  res.target = +(current * (1 + targetPct/100)).toFixed(2);
+
+  if(res.signal !== 'TROP TARD'){
+    if(res.score >= 7){
+      res.signal = 'BUY';
+    } else if(res.score <= 3){
+      res.signal = 'NO BUY';
+    } else {
+      res.signal = 'WAIT';
+    }
+  }
+
+  return res;
+}
+
+function analyzeLateWeakness(candles, quote, analysis){
+  const last10 = candles.slice(-10);
+  if(last10.length < 5) return analysis;
+
+  const highs = last10.map(x => x.h);
+  const lows = last10.map(x => x.l);
+  const closes = last10.map(x => x.cl);
+  const last = last10[last10.length - 1];
+  const prev = last10[last10.length - 2];
+
+  const rejectionTop = (last.h - last.cl) > Math.max(0.01, (last.cl - last.l)) * 1.5;
+  const lostMomentum = closes[closes.length-1] < closes[closes.length-2] && closes[closes.length-2] < closes[closes.length-3];
+  const brokeMiniSupport = closes[closes.length-1] < Math.min(...closes.slice(-5,-1));
+  const localHigh = Math.max(...highs.slice(-6,-1));
+  const failedBreak = prev.cl > localHigh * 0.998 && last.cl < prev.cl;
+
+  if(rejectionTop){
+    analysis.score -= 2;
+    analysis.reasons.push('Rejet sommet détecté');
+  }
+  if(lostMomentum){
+    analysis.score -= 1;
+    analysis.reasons.push('Perte de momentum');
+  }
+  if(brokeMiniSupport){
+    analysis.score -= 2;
+    analysis.reasons.push('Cassure du mini support');
+  }
+  if(failedBreak){
+    analysis.score -= 1;
+    analysis.reasons.push('Cassure ratée');
+  }
+
+  if(analysis.signal === 'BUY' && analysis.score < 6){
+    analysis.signal = 'WAIT';
+  }
+  if(analysis.score <= 2){
+    analysis.signal = 'NO BUY';
+  }
+
+  return analysis;
+}
+
+function getPsychLevel(price){
+  if(!price) return null;
+  if(price >= 100) return Math.round(price / 5) * 5;
+  if(price >= 20) return Math.round(price);
+  return Math.round(price * 2) / 2;
+}
+
+function signalClass(s){
+  if(s === 'BUY') return 'buy';
+  if(s === 'NO BUY') return 'nobuy';
+  if(s === 'TROP TARD') return 'late';
+  return 'wait';
+}
+
+async function scanOne(item){
+  try{
+    const [quote, candleRaw] = await Promise.all([
+      fetchQuote(item.symbol),
+      fetch1mCandles(item.symbol)
+    ]);
+
+    const candles = buildCandleObjects(candleRaw);
+    let analysis = analyzeOpening5(candles, quote, item);
+    analysis = analyzeLateWeakness(candles, quote, analysis);
+
+    item.quote = quote;
+    item.analysis = analysis;
+    item.lastScan = nowDisplay();
+
+    const key = item.symbol + '_' + analysis.signal + '_' + Math.round(quote.c || 0);
+    if((analysis.signal === 'BUY' || analysis.signal === 'TROP TARD') && !APP.alerted[key]){
+      APP.alerted[key] = true;
+      notify(item.symbol + ' ' + analysis.signal, (analysis.reasons || []).slice(0,2).join(' | '));
+    }
+  }catch(e){
+    item.analysis = {
+      signal:'WAIT',
+      reasons:['Erreur API : ' + e.message],
+      score:0,
+      entry:null,
+      stop:null,
+      target:null
+    };
+  }
+}
+
+async function scanAll(){
+  $('marketInfo').textContent = 'Marché : ' + (isUsOpen() ? 'US ouvert' : 'US fermé / hors horaires');
+  $('scanInfo').textContent = 'Dernier scan : ' + nowDisplay();
+
+  for(const item of APP.watchlist){
+    await scanOne(item);
+  }
+  saveState();
+  render();
+}
+
+function render(){
+  const root = $('watchlist');
+  root.innerHTML = '';
+
+  if(!APP.watchlist.length){
+    root.innerHTML = '<div class="muted">Aucune valeur surveillée.</div>';
+    return;
+  }
+
+  APP.watchlist.forEach(item => {
+    const q = item.quote || {};
+    const a = item.analysis || {};
+    const deltaPct = q.pc ? (((q.c - q.pc)/q.pc)*100).toFixed(2) : '-';
+
+    const div = document.createElement('div');
+    div.className = 'item';
+    div.innerHTML = `
+      <div class="row">
+        <div class="col">
+          <strong>${item.symbol}</strong>
+          <span class="pill">${item.kind}</span>
+          <span class="pill ${signalClass(a.signal || 'WAIT')}">${a.signal || 'WAIT'}</span>
+        </div>
+        <div class="col" style="text-align:right;">
+          <div class="price">${q.c ? q.c.toFixed(2) : '-'}</div>
+          <div class="small">${deltaPct}% vs veille</div>
+        </div>
+      </div>
+
+      <div class="small" style="margin-top:6px;">${item.notes || ''}</div>
+
+      <div class="kpi">
+        <div><div class="small">Entrée</div><div>${a.entry ?? '-'}</div></div>
+        <div><div class="small">Stop</div><div>${a.stop ?? '-'}</div></div>
+        <div><div class="small">Target</div><div>${a.target ?? '-'}</div></div>
+        <div><div class="small">Score</div><div>${a.score ?? '-'}</div></div>
+      </div>
+
+      <div class="reason">
+        ${(a.reasons || []).map(r => '• ' + r).join('<br>')}
+      </div>
+
+      <div class="row" style="margin-top:10px;">
+        <div class="col"><button onclick="manualScan('${item.id}')">Scanner maintenant</button></div>
+        <div class="col"><button class="bad" onclick="removeSymbol('${item.id}')">Supprimer</button></div>
+      </div>
+    `;
+    root.appendChild(div);
+  });
+}
+
+async function manualScan(id){
+  const item = APP.watchlist.find(x => x.id === id);
+  if(!item) return;
+  await scanOne(item);
+  saveState();
+  render();
+}
+window.manualScan = manualScan;
+
+function restartScan(){
+  if(APP.timer) clearInterval(APP.timer);
+  APP.timer = setInterval(scanAll, (APP.config.scanInterval || 30) * 1000);
+}
+
+loadState();
+render();
+restartScan();
+if(APP.watchlist.length && APP.config.apiKey) scanAll();
+</script>
 </body>
 </html>
