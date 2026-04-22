@@ -1,67 +1,204 @@
-function analyzeQuoteOnly(symbol, q, item, market){
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SNIPER SCANNER</title>
 
-  const a = {
-    signal: 'NO BUY',
-    score: 0,
-    reasons: [],
-    entry: null,
-    stop: null,
-    target: null,
-    qty: 0,
-    riskValue: 0
-  };
-
-  if(!q || !q.c || !q.o || !q.h || !q.l || !q.pc){
-    a.reasons.push('Données incomplètes');
-    return a;
-  }
-
-  const current = q.c;
-  const open = q.o;
-  const high = q.h;
-  const low = q.l;
-
-  const moveFromOpen = ((current - open) / open) * 100;
-  const range = Math.max(0.01, high - low);
-
-  const closeNearHigh = (high - current) / range < 0.25;
-  const strongMove = moveFromOpen > 0.3;
-  const notTooLate = moveFromOpen < 1.5;
-  const aboveOpen = current > open;
-
-  const zl = parseNum(item.zoneLow);
-  const zh = parseNum(item.zoneHigh);
-  let inZone = true;
-
-  if(zl != null && zh != null){
-    inZone = current >= zl && current <= zh;
-  }
-
-  // 🔥 CONDITIONS SNIPER
-  const sniperBuy =
-    market.allowBuy &&
-    aboveOpen &&
-    closeNearHigh &&
-    strongMove &&
-    notTooLate &&
-    inZone;
-
-  if(sniperBuy){
-    a.signal = 'BUY';
-    a.score = 10;
-    a.reasons.push('SNIPER VALIDÉ');
-  } else {
-    a.signal = 'NO BUY';
-  }
-
-  // Gestion position
-  a.entry = Math.round(current * 100) / 100;
-  a.stop = Math.round(current * (1 - (parseNum(item.stopPct) ?? 0.8)/100) * 100) / 100;
-  a.target = Math.round(current * (1 + (parseNum(item.targetPct) ?? 1.5)/100) * 100) / 100;
-
-  const risk = APP.cfg.capital * (APP.cfg.riskPct / 100);
-  const perShare = Math.abs(a.entry - a.stop);
-  a.qty = Math.floor(risk / perShare);
-
-  return a;
+<style>
+body{
+  margin:0;
+  font-family:Arial;
+  background:#0f172a;
+  color:white;
+  text-align:center;
 }
+
+.card{
+  background:#111827;
+  margin:10px;
+  padding:15px;
+  border-radius:15px;
+}
+
+input,button{
+  padding:12px;
+  margin:5px;
+  width:90%;
+  border-radius:10px;
+  border:none;
+}
+
+.buy{color:#22c55e;font-weight:bold}
+.nobuy{color:#ef4444}
+</style>
+</head>
+
+<body>
+
+<h2>🔥 SNIPER SCANNER</h2>
+
+<div class="card">
+<input id="apiKey" placeholder="Clé Finnhub">
+<button onclick="save()">Sauvegarder</button>
+</div>
+
+<div class="card">
+<input id="symbol" placeholder="Ajouter (NVDA)">
+<button onclick="add()">Ajouter</button>
+</div>
+
+<div id="list"></div>
+
+<script>
+
+let symbols=[]
+let key=""
+let wakeLock=null
+
+// 🔥 ACTIVER écran ON
+async function enableWakeLock(){
+  try{
+    if('wakeLock' in navigator && document.visibilityState === 'visible'){
+      wakeLock = await navigator.wakeLock.request('screen')
+      console.log("WakeLock ON")
+    }
+  }catch(e){
+    console.log("WakeLock refusé")
+  }
+}
+
+// 🔥 LIBÉRER écran
+function releaseWakeLock(){
+  if(wakeLock){
+    wakeLock.release()
+    wakeLock=null
+    console.log("WakeLock OFF")
+  }
+}
+
+// 🔥 gestion quand tu changes d’app
+document.addEventListener("visibilitychange", ()=>{
+  if(document.visibilityState === "visible"){
+    enableWakeLock()
+  }else{
+    releaseWakeLock()
+  }
+})
+
+// 🔥 VISUEL BUY
+function triggerBUY(){
+
+  if(navigator.vibrate){
+    navigator.vibrate([300,100,300,100,600])
+  }
+
+  document.body.innerHTML = `
+    <div style="
+      height:100vh;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      font-size:90px;
+      font-weight:bold;
+      color:white;
+      animation:flash 1s infinite;
+    ">
+      BUY
+    </div>
+
+    <style>
+      @keyframes flash {
+        0% { background:#16a34a; }
+        50% { background:#22c55e; }
+        100% { background:#16a34a; }
+      }
+    </style>
+  `
+}
+
+// save
+function save(){
+  key=document.getElementById("apiKey").value
+  localStorage.setItem("key",key)
+  enableWakeLock()
+}
+
+// add
+function add(){
+  let s=document.getElementById("symbol").value.toUpperCase()
+  symbols.push(s)
+  render()
+}
+
+// render
+function render(){
+  let html=""
+  symbols.forEach(s=>{
+    html+=`<div class="card" id="${s}">${s} ...</div>`
+  })
+  document.getElementById("list").innerHTML=html
+}
+
+// fetch
+async function getQuote(s){
+  let r=await fetch(`https://finnhub.io/api/v1/quote?symbol=${s}&token=${key}`)
+  return await r.json()
+}
+
+// logique SNIPER
+function analyze(q){
+
+  let current=q.c
+  let open=q.o
+  let high=q.h
+  let low=q.l
+
+  let move=((current-open)/open)*100
+
+  let nearHigh=(high-current)/(high-low)<0.25
+  let strong=move>0.3
+  let notLate=move<1.5
+  let above=current>open
+
+  if(above && nearHigh && strong && notLate){
+    return "BUY"
+  }
+
+  return "NO BUY"
+}
+
+// scan
+async function scan(){
+
+  if(!key) return
+
+  for(let s of symbols){
+
+    let q=await getQuote(s)
+
+    let sig=analyze(q)
+
+    if(sig==="BUY"){
+      triggerBUY()
+      return
+    }
+
+    document.getElementById(s).innerHTML=
+      `${s} : ${q.c} → <span class="${sig==='BUY'?'buy':'nobuy'}">${sig}</span>`
+  }
+}
+
+// boucle
+setInterval(scan,10000)
+
+// load
+window.onload=()=>{
+  key=localStorage.getItem("key") || ""
+  enableWakeLock()
+}
+
+</script>
+
+</body>
+</html>
